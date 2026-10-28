@@ -1,1 +1,1657 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#101a14">
+<title>Wildlands VR — The Ancient Wilderness</title>
+
+<style>
+:root {
+  --forest: #15251b;
+  --panel: rgba(13, 25, 18, .88);
+  --border: rgba(180, 218, 175, .3);
+  --green: #a7e5a0;
+  --muted: #c1d0bf;
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--forest);
+  color: #f0f5eb;
+  font-family: system-ui, -apple-system, sans-serif;
+  overscroll-behavior: none;
+}
+button { font: inherit; }
+#game {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+}
+#game canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+}
+#hud {
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+.panel {
+  border: 1px solid var(--border);
+  background: var(--panel);
+  border-radius: 12px;
+  padding: 12px 15px;
+  box-shadow: 0 5px 25px #0003;
+  backdrop-filter: blur(9px);
+}
+#topbar {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  right: 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+.logo {
+  font-weight: 950;
+  letter-spacing: .16em;
+  font-size: 17px;
+}
+.logo span { color: var(--green); }
+.subtitle {
+  color: var(--muted);
+  font-size: 10px;
+  letter-spacing: .14em;
+  margin-top: 3px;
+}
+#location {
+  text-align: right;
+  font-weight: 750;
+  font-size: 13px;
+}
+#coordinates {
+  color: var(--muted);
+  font-size: 10px;
+  margin-top: 4px;
+}
+#crosshair {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 23px;
+  color: #f1f6df;
+  opacity: .85;
+  text-shadow: 0 1px 5px #000;
+}
+#bottomBar {
+  position: absolute;
+  bottom: 14px;
+  left: 14px;
+  right: 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 10px;
+}
+#objective {
+  max-width: min(460px, 65vw);
+}
+#objective strong { font-size: 13px; }
+#objective p {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+#actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ui-button {
+  pointer-events: auto;
+  cursor: pointer;
+  color: #f2f7ed;
+  background: #213b29ed;
+  border: 1px solid #739775;
+  border-radius: 10px;
+  padding: 11px 14px;
+  font-weight: 800;
+  font-size: 12px;
+  touch-action: manipulation;
+}
+.ui-button.primary {
+  background: #b0e6a5;
+  color: #142319;
+  border-color: #b0e6a5;
+}
+.ui-button:active { transform: scale(.97); }
+.ui-button:focus-visible {
+  outline: 3px solid white;
+  outline-offset: 3px;
+}
+#notice {
+  position: fixed;
+  z-index: 5;
+  left: 50%;
+  top: 85px;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: 90vw;
+  text-align: center;
+  color: #f2f6e9;
+  background: #102017eF;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 12px;
+  pointer-events: none;
+}
+#loading {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  place-content: center;
+  gap: 12px;
+  text-align: center;
+  background: #101b15;
+  transition: opacity .8s ease;
+}
+#loading h1 {
+  margin: 0;
+  font-size: clamp(28px, 7vw, 50px);
+  letter-spacing: .14em;
+}
+#loading h1 span { color: var(--green); }
+#loading p {
+  color: var(--muted);
+  font-size: 12px;
+}
+.load-track {
+  width: min(260px, 70vw);
+  height: 4px;
+  margin: auto;
+  overflow: hidden;
+  background: #35483a;
+  border-radius: 5px;
+}
+#loadProgress {
+  height: 100%;
+  width: 0%;
+  background: var(--green);
+  transition: width .2s;
+}
+#mobileControls {
+  position: fixed;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+}
+#joystick {
+  position: absolute;
+  left: 20px;
+  bottom: 100px;
+  width: 116px;
+  height: 116px;
+  border: 2px solid #d5efd177;
+  border-radius: 50%;
+  background: #10251b77;
+  pointer-events: auto;
+  touch-action: none;
+}
+#stickNub {
+  position: absolute;
+  left: 34px;
+  top: 34px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #c9efc5b8;
+  box-shadow: 0 0 18px #b8f5ac33;
+}
+#lookArea {
+  position: absolute;
+  top: 100px;
+  right: 0;
+  bottom: 95px;
+  width: 48%;
+  pointer-events: auto;
+  touch-action: none;
+}
+#hint {
+  position: absolute;
+  left: 50%;
+  bottom: 96px;
+  transform: translateX(-50%);
+  color: #e5efdf;
+  font-size: 10px;
+  text-shadow: 0 2px 5px #000;
+  white-space: nowrap;
+}
+@media (min-width: 850px) {
+  #joystick, #lookArea { display: none; }
+  #hint { bottom: 90px; }
+}
+@media (max-width: 480px) {
+  #topbar { top: 8px; left: 8px; right: 8px; }
+  #bottomBar { bottom: 8px; left: 8px; right: 8px; }
+  .panel { padding: 9px 10px; }
+  .logo { font-size: 13px; }
+  #location { font-size: 11px; }
+  .ui-button { padding: 10px; font-size: 11px; }
+  #objective { max-width: 58vw; }
+}
+</style>
+</head>
+
+<body>
+<div id="game"></div>
+
+<div id="loading">
+  <h1>WILDLANDS<span> VR</span></h1>
+  <p id="loadingText">Awakening the ancient wilderness...</p>
+  <div class="load-track"><div id="loadProgress"></div></div>
+</div>
+
+<div id="hud">
+  <div id="topbar">
+    <div class="panel">
+      <div class="logo">WILDLANDS<span> VR</span></div>
+      <div class="subtitle">THE ANCIENT WILDERNESS</div>
+    </div>
+    <div class="panel">
+      <div id="location">Ancient Forest</div>
+      <div id="coordinates">Expedition preparing...</div>
+    </div>
+  </div>
+
+  <div id="crosshair">+</div>
+
+  <div id="bottomBar">
+    <div class="panel" id="objective">
+      <strong>Explore the forgotten wilds</strong>
+      <p id="objectiveText">Find the ancient ruins. Discover what sleeps beneath the forest.</p>
+    </div>
+    <div id="actions">
+      <button class="ui-button primary" id="vrButton">Enter VR</button>
+      <button class="ui-button" id="campButton">Return to camp</button>
+    </div>
+  </div>
+</div>
+
+<div id="mobileControls">
+  <div id="joystick"><div id="stickNub"></div></div>
+  <div id="lookArea"></div>
+  <div id="hint">LEFT: MOVE · RIGHT: LOOK</div>
+</div>
+
+<div id="notice">Preparing the world...</div>
+
+<script type="module">
+import * as THREE from
+  'https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js';
+
+/* =========================================================
+   WILDLANDS VR — WORLD FOUNDATION
+   Part 1: scene, lighting, terrain and reusable builders
+   ========================================================= */
+
+const $ = id => document.getElementById(id);
+const game = $('game');
+const notice = $('notice');
+const loading = $('loading');
+const loadingText = $('loadingText');
+const loadProgress = $('loadProgress');
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x9cb9b1);
+scene.fog = new THREE.FogExp2(0x9cb9b1, 0.0062);
+
+const camera = new THREE.PerspectiveCamera(
+  76, innerWidth / innerHeight, 0.1, 650
+);
+camera.position.set(0, 1.75, 12);
+
+const renderer = new THREE.WebGLRenderer({
+  antialias: true,
+  powerPreference: 'high-performance'
+});
+renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 1.5));
+renderer.setSize(innerWidth, innerHeight);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.12;
+renderer.xr.enabled = true;
+game.appendChild(renderer.domElement);
+
+// Lighting: broad natural fill plus warm directional sunlight.
+scene.add(new THREE.HemisphereLight(0xdcecff, 0x33452b, 1.8));
+
+const sunlight = new THREE.DirectionalLight(0xffe6bd, 2.25);
+sunlight.position.set(-70, 100, 35);
+scene.add(sunlight);
+
+const ambientFill = new THREE.DirectionalLight(0xb4d7c3, 0.45);
+ambientFill.position.set(45, 35, -65);
+scene.add(ambientFill);
+
+// Centralised materials reduce unnecessary material duplication.
+function material(color, roughness = 1, extra = {}) {
+  return new THREE.MeshStandardMaterial({
+    color, roughness, ...extra
+  });
+}
+
+const M = {
+  soil: material(0x536f42),
+  soilDark: material(0x344d31),
+  grass: material(0x507743),
+  grassLight: material(0x73954d),
+  bark: material(0x493729),
+  barkLight: material(0x624b32),
+  leavesDark: material(0x24472e),
+  leaves: material(0x315c37),
+  leavesLight: material(0x497448),
+  moss: material(0x65834a),
+  stone: material(0x737a72),
+  stoneLight: material(0x93978a),
+  stoneDark: material(0x4d574f),
+  ruin: material(0x999a83),
+  water: material(0x368ca8, 0.25, {
+    metalness: 0.12,
+    transparent: true,
+    opacity: 0.86
+  }),
+  waterDeep: material(0x225a6d, 0.35),
+  crystal: material(0x8bdfb0, 0.22, {
+    emissive: 0x174a2c,
+    emissiveIntensity: 1.3
+  }),
+  ember: new THREE.MeshBasicMaterial({ color: 0xff9b42 })
+};
+
+// Reusable geometries: many trees and stones share the same shapes.
+const G = {
+  trunk: new THREE.CylinderGeometry(0.36, 0.68, 7.2, 7),
+  root: new THREE.CylinderGeometry(0.08, 0.28, 2.4, 5),
+  canopy1: new THREE.ConeGeometry(2.8, 4.5, 7),
+  canopy2: new THREE.ConeGeometry(2.25, 4.1, 7),
+  canopy3: new THREE.ConeGeometry(1.7, 3.5, 7),
+  rock: new THREE.DodecahedronGeometry(1, 0),
+  bush: new THREE.IcosahedronGeometry(1, 0),
+  log: new THREE.CylinderGeometry(0.18, 0.23, 1, 7),
+  box: new THREE.BoxGeometry(1, 1, 1)
+};
+
+function mesh(geometry, mat, x, y, z, parent = scene) {
+  const obj = new THREE.Mesh(geometry, mat);
+  obj.position.set(x, y, z);
+  obj.castShadow = false;
+  obj.receiveShadow = false;
+  parent.add(obj);
+  return obj;
+}
+
+function box(x, y, z, sx, sy, sz, mat, parent = scene) {
+  const obj = mesh(G.box, mat, x, y, z, parent);
+  obj.scale.set(sx, sy, sz);
+  return obj;
+}
+
+function seededRandom(seedValue) {
+  let seed = seedValue >>> 0;
+  return function() {
+    seed = (seed * 1664525 + 1013904223) >>> 0;
+    return seed / 4294967296;
+  };
+}
+
+const random = seededRandom(723581);
+const world = new THREE.Group();
+scene.add(world);
+
+function makeGround() {
+  const geometry = new THREE.PlaneGeometry(440, 440, 1, 1);
+  const ground = mesh(geometry, M.soil, 0, -0.32, 0, world);
+  ground.rotation.x = -Math.PI / 2;
+
+  // Large low-detail terrain mounds give the horizon depth.
+  for (let i = 0; i < 36; i++) {
+    const angle = i / 36 * Math.PI * 2;
+    const radius = 125 + random() * 35;
+    const height = 18 + random() * 32;
+    const width = 15 + random() * 20;
+    const mountain = mesh(
+      new THREE.ConeGeometry(width, height, 7),
+      i % 4 === 0 ? M.stoneDark : M.stone,
+      Math.cos(angle) * radius,
+      height / 2 - 1,
+      Math.sin(angle) * radius,
+      world
+    );
+    mountain.rotation.y = angle;
+    mountain.rotation.z = (random() - 0.5) * 0.12;
+  }
+}
+
+function makeTree(x, z, scale = 1) {
+  const group = new THREE.Group();
+  group.position.set(x, 0, z);
+  group.scale.setScalar(scale);
+  world.add(group);
+
+  const trunk = new THREE.Mesh(G.trunk, random() > 0.5 ? M.bark : M.barkLight);
+  trunk.position.y = 3.6;
+  group.add(trunk);
+
+  // Exposed roots make the forest floor feel older and more organic.
+  for (let i = 0; i < 4; i++) {
+    const angle = i * Math.PI / 2 + random() * 0.3;
+    const root = new THREE.Mesh(G.root, M.bark);
+    root.position.set(Math.cos(angle) * 0.7, 0.45, Math.sin(angle) * 0.7);
+    root.rotation.z = Math.cos(angle) * 0.48;
+    root.rotation.x = Math.sin(angle) * 0.48;
+    root.rotation.y = -angle;
+    group.add(root);
+  }
+
+  const crowns = [G.canopy1, G.canopy2, G.canopy3];
+  for (let i = 0; i < crowns.length; i++) {
+    const canopy = new THREE.Mesh(
+      crowns[i],
+      [M.leavesDark, M.leaves, M.leavesLight][i]
+    );
+    canopy.position.y = 5.6 + i * 1.75;
+    canopy.rotation.y = random() * Math.PI;
+    group.add(canopy);
+  }
+
+  // A few branches break up the perfectly vertical silhouette.
+  if (random() > 0.45) {
+    for (let i = 0; i < 2; i++) {
+      const branch = mesh(
+        G.log, M.bark, 0, 0, 0, group
+      );
+      branch.scale.set(0.65, 3.1, 0.65);
+      branch.position.set(i ? 0.7 : -0.7, 4.3 + i * 0.5, 0);
+      branch.rotation.z = i ? -0.9 : 0.9;
+    }
+  }
+
+  return group;
+}
+
+function makeRock(x, z, scale = 1) {
+  const rock = mesh(G.rock, M.stone, x, 0.35 * scale, z, world);
+  rock.scale.set(
+    scale * (0.8 + random() * 0.7),
+    scale * (0.45 + random() * 0.5),
+    scale * (0.8 + random() * 0.7)
+  );
+  rock.rotation.set(random(), random() * 3, random());
+  return rock;
+}
+
+function makeBush(x, z, scale = 1) {
+  const bush = mesh(
+    G.bush, random() > 0.5 ? M.moss : M.leavesLight,
+    x, 0.28 * scale, z, world
+  );
+  bush.scale.set(scale * 1.3, scale * 0.7, scale);
+  bush.rotation.set(random(), random() * 3, random());
+  return bush;
+}
+
+
+/* =========================================================
+   PART 2 — WILDERNESS GENERATION
+   River, waterfalls, vegetation, ruins and campfire
+   ========================================================= */
+
+// Create the river from multiple curved sections.
+const animatedWater = [];
+const animatedFire = [];
+const animatedCrystals = [];
+
+function createRiver() {
+  const points = [
+    new THREE.Vector3(-105, 0, -80),
+    new THREE.Vector3(-72, 0, -45),
+    new THREE.Vector3(-48, 0, -8),
+    new THREE.Vector3(-18, 0, 20),
+    new THREE.Vector3(18, 0, 40),
+    new THREE.Vector3(47, 0, 28),
+    new THREE.Vector3(72, 0, 52),
+    new THREE.Vector3(105, 0, 92)
+  ];
+
+  const curve = new THREE.CatmullRomCurve3(points);
+  const segments = 150;
+  const vertices = [];
+  const uvs = [];
+  const indices = [];
+
+  for (let i = 0; i <= segments; i++) {
+    const t = i / segments;
+    const point = curve.getPoint(t);
+    const tangent = curve.getTangent(t);
+    const side = new THREE.Vector3(-tangent.z, 0, tangent.x)
+      .normalize();
+
+    const halfWidth = 4.0 + Math.sin(t * Math.PI * 5) * 0.8;
+
+    for (const sign of [-1, 1]) {
+      const p = point.clone().addScaledVector(side, halfWidth * sign);
+      vertices.push(p.x, 0.04, p.z);
+      uvs.push(t * 18, sign * 1.5);
+    }
+
+    if (i < segments) {
+      const a = i * 2;
+      indices.push(a, a + 2, a + 1);
+      indices.push(a + 1, a + 2, a + 3);
+    }
+  }
+
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute(
+    'position',
+    new THREE.Float32BufferAttribute(vertices, 3)
+  );
+  geometry.setAttribute(
+    'uv',
+    new THREE.Float32BufferAttribute(uvs, 2)
+  );
+  geometry.setIndex(indices);
+  geometry.computeVertexNormals();
+
+  const river = new THREE.Mesh(geometry, M.water);
+  river.frustumCulled = false;
+  world.add(river);
+  animatedWater.push(river);
+
+  // Riverbank stones are placed beside the water rather than
+  // across its centre, keeping a visible route through the world.
+  for (let i = 0; i < 100; i++) {
+    const t = 0.04 + random() * 0.92;
+    const point = curve.getPoint(t);
+    const tangent = curve.getTangent(t);
+    const sideSign = random() > 0.5 ? 1 : -1;
+    const side = new THREE.Vector3(-tangent.z, 0, tangent.x)
+      .normalize();
+
+    const offset = 5.0 + random() * 3.5;
+    const p = point.addScaledVector(side, offset * sideSign);
+    makeRock(p.x, p.z, 0.35 + random() * 0.85);
+  }
+
+  // Shallow pools make the river bend visually richer.
+  for (let i = 0; i < 7; i++) {
+    const t = 0.1 + i * 0.12;
+    const p = curve.getPoint(t);
+    const pool = mesh(
+      new THREE.CircleGeometry(3 + random() * 2, 20),
+      M.waterDeep,
+      p.x, 0.025, p.z,
+      world
+    );
+    pool.rotation.x = -Math.PI / 2;
+  }
+
+  createWaterfall(-18, 1.5, 20, 5.5);
+  createWaterfall(47, 1.3, 28, 4.0);
+}
+
+function createWaterfall(x, z, yHeight, width) {
+  const sheet = new THREE.Mesh(
+    new THREE.PlaneGeometry(width, yHeight),
+    new THREE.MeshBasicMaterial({
+      color: 0x82d7e6,
+      transparent: true,
+      opacity: 0.62,
+      side: THREE.DoubleSide,
+      depthWrite: false
+    })
+  );
+  sheet.position.set(x, yHeight / 2, z);
+  sheet.rotation.y = -0.25;
+  world.add(sheet);
+  animatedWater.push(sheet);
+
+  const pool = mesh(
+    new THREE.CircleGeometry(width * 0.85, 24),
+    M.water,
+    x, 0.055, z + 1.8,
+    world
+  );
+  pool.rotation.x = -Math.PI / 2;
+
+  // Pale rocks frame the waterfall.
+  for (let i = 0; i < 12; i++) {
+    const side = i % 2 ? 1 : -1;
+    makeRock(
+      x + side * (width * 0.6 + random() * 1.6),
+      z + (random() - 0.5) * 4,
+      0.6 + random() * 1.0
+    );
+  }
+}
+
+function createFallenLog(x, z, length, angle) {
+  const log = mesh(G.log, M.bark, x, 0.55, z, world);
+  log.scale.set(0.8, length, 0.8);
+  log.rotation.z = Math.PI / 2;
+  log.rotation.y = angle;
+
+  const cut = mesh(
+    new THREE.CircleGeometry(0.22, 9),
+    M.barkLight,
+    x, 0.55, z,
+    world
+  );
+  cut.scale.setScalar(1.15);
+  cut.rotation.x = -Math.PI / 2;
+  cut.position.x += Math.cos(angle) * length * 0.5;
+  cut.position.z -= Math.sin(angle) * length * 0.5;
+
+  // Small moss patches on the fallen trunk.
+  for (let i = 0; i < 3; i++) {
+    const moss = mesh(
+      G.bush, M.moss,
+      x + (random() - 0.5) * length * 0.55,
+      0.75 + random() * 0.12,
+      z + (random() - 0.5) * 0.45,
+      world
+    );
+    moss.scale.set(0.5, 0.12, 0.35);
+  }
+}
+
+function createForest() {
+  // Keep a clear starting area around the camp.
+  const campClearRadius = 13;
+
+  // Distributed trees create a broad, explorable forest.
+  for (let i = 0; i < 420; i++) {
+    const x = (random() - 0.5) * 250;
+    const z = (random() - 0.5) * 250;
+    const distanceFromCamp = Math.hypot(x, z - 12);
+
+    // Keep the centre clear enough for a first-person spawn.
+    if (distanceFromCamp < campClearRadius) continue;
+
+    // Leave some open space along the main river.
+    if (Math.abs(x + z * 0.55) < 5 && random() > 0.25) {
+      continue;
+    }
+
+    const size = 0.8 + random() * 1.5;
+    makeTree(x, z, size);
+  }
+
+  // Understory: ferns, bushes and small mossy plants.
+  for (let i = 0; i < 520; i++) {
+    const x = (random() - 0.5) * 230;
+    const z = (random() - 0.5) * 230;
+
+    if (Math.hypot(x, z - 12) < 5) continue;
+
+    const r = random();
+    if (r < 0.58) {
+      makeBush(x, z, 0.35 + random() * 0.8);
+    } else {
+      makeFern(x, z, 0.5 + random() * 1.1);
+    }
+  }
+
+  // Scattered stones give the ground a natural silhouette.
+  for (let i = 0; i < 180; i++) {
+    const x = (random() - 0.5) * 235;
+    const z = (random() - 0.5) * 235;
+    if (Math.hypot(x, z - 12) < 5) continue;
+    makeRock(x, z, 0.25 + random() * 1.15);
+  }
+
+  // Old trunks hint at storms and the age of the forest.
+  for (let i = 0; i < 28; i++) {
+    const x = (random() - 0.5) * 190;
+    const z = (random() - 0.5) * 190;
+    if (Math.hypot(x, z - 12) < 16) continue;
+    createFallenLog(x, z, 2.5 + random() * 6, random() * Math.PI);
+  }
+}
+
+function makeFern(x, z, scale) {
+  const group = new THREE.Group();
+  group.position.set(x, 0, z);
+  group.scale.setScalar(scale);
+  world.add(group);
+
+  const stemMaterial = M.grassLight;
+  const leafMaterial = random() > 0.5 ? M.leaves : M.moss;
+
+  for (let i = 0; i < 7; i++) {
+    const angle = i * Math.PI * 2 / 7;
+    const length = 0.55 + random() * 0.35;
+
+    const stem = mesh(
+      G.log, stemMaterial, 0, 0, 0, group
+    );
+    stem.scale.set(0.06, length, 0.06);
+    stem.position.set(
+      Math.cos(angle) * 0.22,
+      length * 0.48,
+      Math.sin(angle) * 0.22
+    );
+    stem.rotation.z = -Math.cos(angle) * 0.65;
+    stem.rotation.x = Math.sin(angle) * 0.65;
+
+    const leaf = mesh(
+      G.bush, leafMaterial, 0, 0, 0, group
+    );
+    leaf.scale.set(0.18, 0.08, 0.42);
+    leaf.position.set(
+      Math.cos(angle) * 0.45,
+      length * 0.6,
+      Math.sin(angle) * 0.45
+    );
+    leaf.rotation.y = -angle;
+  }
+}
+
+function createAncientRuins() {
+  const ruin = new THREE.Group();
+  ruin.position.set(-43, 0, -33);
+  world.add(ruin);
+
+  // Broken circular foundation.
+  const base = mesh(
+    new THREE.CylinderGeometry(10, 10.8, 0.8, 12),
+    M.stoneDark,
+    0, 0.1, 0,
+    ruin
+  );
+  base.scale.z = 0.82;
+
+  const innerRing = mesh(
+    new THREE.CylinderGeometry(7.5, 7.8, 0.3, 12),
+    M.ruin,
+    0, 0.6, 0,
+    ruin
+  );
+  innerRing.scale.z = 0.82;
+
+  // A deliberately incomplete ring of pillars.
+  for (let i = 0; i < 11; i++) {
+    if (i === 2 || i === 7) continue;
+
+    const angle = i / 11 * Math.PI * 2;
+    const radius = 8.6;
+    const height = 3.0 + random() * 3.0;
+
+    const pillar = mesh(
+      G.box,
+      i % 3 === 0 ? M.stoneDark : M.ruin,
+      Math.cos(angle) * radius,
+      height / 2 + 0.5,
+      Math.sin(angle) * radius,
+      ruin
+    );
+    pillar.scale.set(
+      1.0 + random() * 0.25,
+      height,
+      0.9 + random() * 0.2
+    );
+    pillar.rotation.y = angle;
+    pillar.rotation.z = (random() - 0.5) * 0.12;
+
+    if (i % 2 === 0) {
+      const cap = mesh(
+        G.box, M.stoneLight,
+        Math.cos(angle) * radius,
+        height + 0.65,
+        Math.sin(angle) * radius,
+        ruin
+      );
+      cap.scale.set(1.35, 0.35, 1.2);
+      cap.rotation.y = angle;
+    }
+  }
+
+  // Fallen blocks around the ruin.
+  for (let i = 0; i < 16; i++) {
+    const angle = random() * Math.PI * 2;
+    const radius = 10 + random() * 5;
+    const block = mesh(
+      G.box,
+      random() > 0.5 ? M.ruin : M.stone,
+      Math.cos(angle) * radius,
+      0.35 + random() * 0.5,
+      Math.sin(angle) * radius,
+      ruin
+    );
+    block.scale.set(
+      1.5 + random() * 2,
+      0.5 + random(),
+      1 + random()
+    );
+    block.rotation.y = random() * Math.PI;
+    block.rotation.z = (random() - 0.5) * 0.25;
+  }
+
+  // Ancient central altar.
+  const altar = mesh(
+    G.box, M.stoneDark,
+    0, 1.0, 0,
+    ruin
+  );
+  altar.scale.set(2.8, 2, 2.8);
+
+  const altarTop = mesh(
+    G.box, M.ruin,
+    0, 2.1, 0,
+    ruin
+  );
+  altarTop.scale.set(3.4, 0.35, 3.4);
+
+  const crystal = mesh(
+    new THREE.OctahedronGeometry(0.85, 0),
+    M.crystal,
+    0, 3.25, 0,
+    ruin
+  );
+  animatedCrystals.push(crystal);
+
+  // Low emissive light creates a mysterious focal point.
+  const crystalLight = new THREE.PointLight(0x64e8a0, 2.0, 17);
+  crystalLight.position.set(0, 3.4, 0);
+  ruin.add(crystalLight);
+
+  // A worn path of stones approaches the ruins.
+  for (let i = 0; i < 16; i++) {
+    const t = i / 15;
+    const stone = mesh(
+      G.box, M.stoneDark,
+      -4 + t * -11,
+      0.04,
+      -8 + t * -7,
+      ruin
+    );
+    stone.scale.set(1.6, 0.12, 1.0);
+    stone.rotation.y = (random() - 0.5) * 0.25;
+  }
+}
+
+function createCamp() {
+  const camp = new THREE.Group();
+  camp.position.set(0, 0, 12);
+  world.add(camp);
+
+  // Flattened stone ring.
+  const ring = mesh(
+    new THREE.TorusGeometry(2.1, 0.22, 6, 16),
+    M.stoneDark,
+    0, 0.16, 0,
+    camp
+  );
+  ring.rotation.x = Math.PI / 2;
+
+  for (let i = 0; i < 12; i++) {
+    const angle = i / 12 * Math.PI * 2;
+    const stone = mesh(
+      G.rock, M.stone,
+      Math.cos(angle) * 2.0,
+      0.2,
+      Math.sin(angle) * 2.0,
+      camp
+    );
+    stone.scale.set(0.5, 0.25, 0.45);
+  }
+
+  // Three logs form the centre of the fire.
+  for (let i = 0; i < 3; i++) {
+    const log = mesh(
+      G.log, M.bark,
+      0, 0.23, 0,
+      camp
+    );
+    log.scale.set(0.55, 2.0, 0.55);
+    log.rotation.z = Math.PI / 2;
+    log.rotation.y = i * Math.PI / 3;
+  }
+
+  const flameMaterials = [
+    new THREE.MeshBasicMaterial({
+      color: 0xffb347,
+      transparent: true,
+      opacity: 0.9
+    }),
+    new THREE.MeshBasicMaterial({
+      color: 0xff642b,
+      transparent: true,
+      opacity: 0.85
+    }),
+    new THREE.MeshBasicMaterial({
+      color: 0xffe19a,
+      transparent: true,
+      opacity: 0.9
+    })
+  ];
+
+  for (let i = 0; i < 3; i++) {
+    const flame = mesh(
+      new THREE.ConeGeometry(
+        0.55 - i * 0.09,
+        1.4 - i * 0.22,
+        7
+      ),
+      flameMaterials[i],
+      0, 0.8 + i * 0.12, 0,
+      camp
+    );
+    flame.position.x = (i - 1) * 0.12;
+    animatedFire.push({
+      mesh: flame,
+      phase: i * 1.7,
+      baseY: flame.position.y
+    });
+  }
+
+  const light = new THREE.PointLight(0xff8c42, 3.0, 17);
+  light.position.set(0, 2.0, 0);
+  camp.add(light);
+
+  animatedFire.push({
+    light,
+    phase: 0.5,
+    baseIntensity: 3.0
+  });
+
+  // Rough shelters at the edge of the clearing.
+  for (let i = 0; i < 2; i++) {
+    const shelter = new THREE.Group();
+    shelter.position.set(i ? 7 : -7, 0, -2);
+    shelter.rotation.y = i * 0.45;
+    camp.add(shelter);
+
+    const roof = mesh(
+      G.box, M.bark,
+      0, 2.2, 0,
+      shelter
+    );
+    roof.scale.set(4.2, 0.25, 2.2);
+    roof.rotation.z = i ? -0.3 : 0.3;
+
+    for (const side of [-1, 1]) {
+      const pole = mesh(
+        G.log, M.barkLight,
+        side * 1.6, 1.0, 0,
+        shelter
+      );
+      pole.scale.set(0.2, 2.3, 0.2);
+      pole.rotation.z = side * 0.15;
+    }
+  }
+
+  // Supplies beside the campfire.
+  for (let i = 0; i < 3; i++) {
+    const crate = mesh(
+      G.box, M.barkLight,
+      -3.2 - i * 0.8, 0.45, 3.2 + i * 0.2,
+      camp
+    );
+    crate.scale.set(0.8, 0.8, 0.8);
+    crate.rotation.y = random() * 0.3;
+  }
+
+  return camp;
+}
+
+function createMushrooms() {
+  const capMaterials = [
+    material(0xb65c46),
+    material(0xd2b47c),
+    material(0x9c6dba)
+  ];
+  const stemMaterial = material(0xd4d0b6);
+
+  for (let i = 0; i < 90; i++) {
+    const x = (random() - 0.5) * 220;
+    const z = (random() - 0.5) * 220;
+    if (Math.hypot(x, z - 12) < 5) continue;
+
+    const group = new THREE.Group();
+    group.position.set(x, 0, z);
+    world.add(group);
+
+    const height = 0.2 + random() * 0.35;
+    const stem = mesh(
+      new THREE.CylinderGeometry(0.045, 0.07, height, 5),
+      stemMaterial,
+      0, height / 2, 0,
+      group
+    );
+
+    const cap = mesh(
+      new THREE.SphereGeometry(0.16 + random() * 0.1, 7, 5, 0, Math.PI * 2, 0, Math.PI / 2),
+      capMaterials[i % capMaterials.length],
+      0, height, 0,
+      group
+    );
+    cap.scale.y = 0.65;
+  }
+}
+
+function createCrystalClusters() {
+  for (let i = 0; i < 12; i++) {
+    const x = (random() - 0.5) * 180;
+    const z = (random() - 0.5) * 180;
+
+    if (Math.hypot(x, z - 12) < 18) continue;
+
+    const group = new THREE.Group();
+    group.position.set(x, 0, z);
+    world.add(group);
+
+    const count = 2 + Math.floor(random() * 4);
+    for (let j = 0; j < count; j++) {
+      const size = 0.25 + random() * 0.55;
+      const crystal = mesh(
+        new THREE.OctahedronGeometry(size, 0),
+        M.crystal,
+        (random() - 0.5) * 1.2,
+        size * 0.7,
+        (random() - 0.5) * 1.2,
+        group
+      );
+      crystal.rotation.set(random(), random(), random());
+      animatedCrystals.push(crystal);
+    }
+
+    const glow = new THREE.PointLight(0x55d99a, 0.65, 8);
+    glow.position.set(0, 1, 0);
+    group.add(glow);
+  }
+}
+
+// The world is built once, before Part 3 starts the game loop.
+function buildWilderness() {
+  loadingText.textContent = 'Shaping the ancient terrain...';
+  loadProgress.style.width = '12%';
+  makeGround();
+
+  loadingText.textContent = 'Carving rivers and waterfalls...';
+  loadProgress.style.width = '27%';
+  createRiver();
+
+  loadingText.textContent = 'Growing the ancient forest...';
+  loadProgress.style.width = '48%';
+  createForest();
+
+  loadingText.textContent = 'Restoring forgotten ruins...';
+  loadProgress.style.width = '69%';
+  createAncientRuins();
+
+  loadingText.textContent = 'Lighting the expedition camp...';
+  loadProgress.style.width = '83%';
+  createCamp();
+
+  loadingText.textContent = 'Adding rare ancient discoveries...';
+  loadProgress.style.width = '94%';
+  createMushrooms();
+  createCrystalClusters();
+
+  loadProgress.style.width = '100%';
+  loadingText.textContent = 'The wilderness is awakening...';
+}
+
+buildWilderness();
+
+
+/* =========================================================
+   PART 3 — EXPLORATION, CONTROLS, ANIMATION AND VR
+   ========================================================= */
+
+const clock = new THREE.Clock();
+
+const player = {
+  speed: 7.0,
+  sprintMultiplier: 1.65,
+  yaw: 0,
+  pitch: 0,
+  verticalVelocity: 0,
+  grounded: true
+};
+
+const keys = Object.create(null);
+const moveInput = { x: 0, y: 0 };
+const cameraForward = new THREE.Vector3();
+const cameraRight = new THREE.Vector3();
+const moveDirection = new THREE.Vector3();
+const worldUp = new THREE.Vector3(0, 1, 0);
+
+let pointerLocked = false;
+let joystickPointer = null;
+let lookPointer = null;
+let previousLookX = 0;
+let previousLookY = 0;
+let gameStarted = false;
+let vrSupported = false;
+
+const spawnPoint = new THREE.Vector3(0, 1.75, 12);
+
+// Reusable temporary vectors avoid creating new objects every frame.
+function updateCameraDirection() {
+  camera.rotation.order = 'YXZ';
+  camera.rotation.y = player.yaw;
+  camera.rotation.x = player.pitch;
+}
+
+function showNotice(message, duration = 2600) {
+  notice.textContent = message;
+  notice.style.display = 'block';
+
+  if (showNotice.timer) clearTimeout(showNotice.timer);
+  showNotice.timer = setTimeout(() => {
+    notice.style.display = 'none';
+  }, duration);
+}
+
+// Starting position and direction.
+camera.position.copy(spawnPoint);
+updateCameraDirection();
+
+// Keyboard input.
+addEventListener('keydown', event => {
+  const key = event.key.toLowerCase();
+  keys[key] = true;
+
+  if (
+    ['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' ']
+      .includes(key)
+  ) {
+    event.preventDefault();
+  }
+
+  if (key === 'escape' && pointerLocked) {
+    showNotice('Mouse control released.');
+  }
+});
+
+addEventListener('keyup', event => {
+  keys[event.key.toLowerCase()] = false;
+});
+
+addEventListener('blur', () => {
+  for (const key in keys) keys[key] = false;
+  moveInput.x = 0;
+  moveInput.y = 0;
+});
+
+// Desktop mouse look.
+renderer.domElement.addEventListener('click', () => {
+  if (
+    matchMedia('(min-width: 851px)').matches &&
+    !renderer.xr.isPresenting &&
+    renderer.domElement.requestPointerLock
+  ) {
+    renderer.domElement.requestPointerLock();
+  }
+});
+
+document.addEventListener('pointerlockchange', () => {
+  pointerLocked =
+    document.pointerLockElement === renderer.domElement;
+});
+
+document.addEventListener('mousemove', event => {
+  if (!pointerLocked || renderer.xr.isPresenting) return;
+
+  player.yaw -= event.movementX * 0.0022;
+  player.pitch -= event.movementY * 0.0020;
+  player.pitch = THREE.MathUtils.clamp(
+    player.pitch, -1.35, 1.35
+  );
+
+  updateCameraDirection();
+});
+
+// Mobile joystick.
+const joystick = $('joystick');
+const stickNub = $('stickNub');
+
+function resetJoystick() {
+  moveInput.x = 0;
+  moveInput.y = 0;
+  stickNub.style.left = '34px';
+  stickNub.style.top = '34px';
+}
+
+joystick.addEventListener('pointerdown', event => {
+  event.preventDefault();
+  joystickPointer = event.pointerId;
+  joystick.setPointerCapture(event.pointerId);
+  updateJoystick(event);
+});
+
+joystick.addEventListener('pointermove', event => {
+  if (event.pointerId !== joystickPointer) return;
+  event.preventDefault();
+  updateJoystick(event);
+});
+
+function updateJoystick(event) {
+  const rect = joystick.getBoundingClientRect();
+  const centreX = rect.left + rect.width / 2;
+  const centreY = rect.top + rect.height / 2;
+
+  let dx = event.clientX - centreX;
+  let dy = event.clientY - centreY;
+
+  const maxDistance = 35;
+  const length = Math.hypot(dx, dy);
+
+  if (length > maxDistance) {
+    dx = dx / length * maxDistance;
+    dy = dy / length * maxDistance;
+  }
+
+  moveInput.x = dx / maxDistance;
+  moveInput.y = dy / maxDistance;
+
+  stickNub.style.left = `${34 + dx}px`;
+  stickNub.style.top = `${34 + dy}px`;
+}
+
+function endJoystick(event) {
+  if (event.pointerId !== joystickPointer) return;
+  joystickPointer = null;
+  resetJoystick();
+}
+
+joystick.addEventListener('pointerup', endJoystick);
+joystick.addEventListener('pointercancel', endJoystick);
+joystick.addEventListener('lostpointercapture', () => {
+  joystickPointer = null;
+  resetJoystick();
+});
+
+// Mobile look area.
+const lookArea = $('lookArea');
+
+lookArea.addEventListener('pointerdown', event => {
+  if (event.pointerType === 'mouse') return;
+
+  lookPointer = event.pointerId;
+  previousLookX = event.clientX;
+  previousLookY = event.clientY;
+  lookArea.setPointerCapture(event.pointerId);
+});
+
+lookArea.addEventListener('pointermove', event => {
+  if (event.pointerId !== lookPointer) return;
+
+  const dx = event.clientX - previousLookX;
+  const dy = event.clientY - previousLookY;
+
+  previousLookX = event.clientX;
+  previousLookY = event.clientY;
+
+  player.yaw -= dx * 0.004;
+  player.pitch -= dy * 0.003;
+  player.pitch = THREE.MathUtils.clamp(
+    player.pitch, -1.35, 1.35
+  );
+
+  updateCameraDirection();
+});
+
+function endLook(event) {
+  if (event.pointerId === lookPointer) lookPointer = null;
+}
+
+lookArea.addEventListener('pointerup', endLook);
+lookArea.addEventListener('pointercancel', endLook);
+
+// Return to the starting camp.
+$('campButton').addEventListener('click', () => {
+  if (renderer.xr.isPresenting) {
+    showNotice('Exit VR before returning to camp.');
+    return;
+  }
+
+  camera.position.copy(spawnPoint);
+  player.yaw = 0;
+  player.pitch = 0;
+  player.verticalVelocity = 0;
+  updateCameraDirection();
+
+  showNotice('Returned to the expedition camp.');
+});
+
+// Basic collision avoidance around major solid structures.
+// This prototype does not yet include full terrain collision.
+const solidAreas = [
+  { x: -43, z: -33, radius: 7.5 }
+];
+
+function isNearSolid(x, z) {
+  for (const area of solidAreas) {
+    if (Math.hypot(x - area.x, z - area.z) < area.radius) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// Find the region name from the player's approximate location.
+function getRegionName(x, z) {
+  if (x < -75 && z > 20) return 'Ancient Forest';
+  if (x < -60 && z < -35) return 'Mountain Foothills';
+  if (x > 65 && z > 45) return 'Riverlands';
+  if (x > 60 && z < -50) return 'Highland Wilds';
+  if (z < -95) return 'Northern Wilderness';
+  if (z > 95) return 'Southern Wilds';
+  return 'Ancient Forest';
+}
+
+let lastRegion = '';
+
+function updateHud() {
+  const x = camera.position.x;
+  const z = camera.position.z;
+  const region = getRegionName(x, z);
+
+  if (region !== lastRegion) {
+    lastRegion = region;
+    $('location').textContent = region;
+    $('objectiveText').textContent =
+      region === 'Ancient Forest'
+        ? 'Explore the forgotten wilds. Seek the ancient ruins.'
+        : `Explore ${region}. Watch for ancient discoveries.`;
+  }
+
+  $('coordinates').textContent =
+    `X ${x.toFixed(0)} · Z ${z.toFixed(0)}`;
+}
+
+// Keyboard and joystick movement.
+// Movement is relative to the player's horizontal facing direction.
+function updateMovement(delta) {
+  if (renderer.xr.isPresenting) return;
+
+  let forward = 0;
+  let sideways = 0;
+
+  if (keys['w'] || keys['arrowup']) forward += 1;
+  if (keys['s'] || keys['arrowdown']) forward -= 1;
+  if (keys['a'] || keys['arrowleft']) sideways -= 1;
+  if (keys['d'] || keys['arrowright']) sideways += 1;
+
+  forward += -moveInput.y;
+  sideways += moveInput.x;
+
+  const magnitude = Math.hypot(forward, sideways);
+  if (magnitude > 1) {
+    forward /= magnitude;
+    sideways /= magnitude;
+  }
+
+  const sprinting = keys['shift'];
+  const speed = player.speed *
+    (sprinting ? player.sprintMultiplier : 1);
+
+  cameraForward.set(
+    -Math.sin(player.yaw), 0, -Math.cos(player.yaw)
+  );
+  cameraRight.set(
+    Math.cos(player.yaw), 0, -Math.sin(player.yaw)
+  );
+
+  moveDirection.set(0, 0, 0);
+  moveDirection.addScaledVector(cameraForward, forward);
+  moveDirection.addScaledVector(cameraRight, sideways);
+
+  const step = speed * delta;
+  const nextX = camera.position.x + moveDirection.x * step;
+  const nextZ = camera.position.z + moveDirection.z * step;
+
+  // Do not walk through the main ruin foundation.
+  if (!isNearSolid(nextX, nextZ)) {
+    camera.position.x = nextX;
+    camera.position.z = nextZ;
+  }
+
+  // Keep the player within the prototype's terrain bounds.
+  camera.position.x = THREE.MathUtils.clamp(
+    camera.position.x, -210, 210
+  );
+  camera.position.z = THREE.MathUtils.clamp(
+    camera.position.z, -210, 210
+  );
+}
+
+// Lightweight environmental animation.
+function animateEnvironment(time) {
+  const seconds = time * 0.001;
+
+  for (let i = 0; i < animatedFire.length; i++) {
+    const item = animatedFire[i];
+    const flicker = Math.sin(seconds * 8 + item.phase) * 0.09 +
+      Math.sin(seconds * 13 + item.phase) * 0.045;
+
+    if (item.mesh) {
+      item.mesh.scale.y = 1 + flicker;
+      item.mesh.rotation.y += 0.006;
+      item.mesh.position.y = item.baseY + flicker * 0.5;
+    }
+
+    if (item.light) {
+      item.light.intensity =
+        item.baseIntensity + Math.sin(seconds * 11) * 0.45;
+    }
+  }
+
+  for (let i = 0; i < animatedCrystals.length; i++) {
+    const crystal = animatedCrystals[i];
+    crystal.rotation.y += 0.004;
+    crystal.position.y +=
+      Math.sin(seconds * 1.7 + i) * 0.0009;
+  }
+
+  // Subtle water-sheet shimmer. Geometry remains stationary.
+  for (let i = 0; i < animatedWater.length; i++) {
+    const water = animatedWater[i];
+    if (water.material && water.material.transparent) {
+      water.material.opacity =
+        0.58 + Math.sin(seconds * 2 + i) * 0.04;
+    }
+  }
+}
+
+// WebXR support check.
+async function setupVR() {
+  if (!navigator.xr) {
+    $('vrButton').textContent = 'VR unavailable';
+    showNotice(
+      'WebXR is unavailable in this browser. Explore in desktop or mobile mode.',
+      5000
+    );
+    return;
+  }
+
+  try {
+    vrSupported = await navigator.xr.isSessionSupported('immersive-vr');
+
+    if (vrSupported) {
+      $('vrButton').textContent = 'Enter VR';
+      showNotice('VR is supported. Put on your compatible headset.');
+    } else {
+      $('vrButton').textContent = 'VR unavailable';
+      showNotice(
+        'This browser or device does not currently support immersive VR.',
+        4500
+      );
+    }
+  } catch (error) {
+    $('vrButton').textContent = 'VR unavailable';
+  }
+}
+
+$('vrButton').addEventListener('click', async () => {
+  if (renderer.xr.isPresenting) {
+    const session = renderer.xr.getSession();
+    if (session) await session.end();
+    return;
+  }
+
+  if (!navigator.xr) {
+    showNotice('WebXR is not available here. Try a compatible VR browser over HTTPS.');
+    return;
+  }
+
+  try {
+    const supported = await navigator.xr.isSessionSupported('immersive-vr');
+
+    if (!supported) {
+      showNotice('Immersive VR is not supported by this browser/device.');
+      return;
+    }
+
+    const session = await navigator.xr.requestSession('immersive-vr', {
+      optionalFeatures: ['local-floor', 'bounded-floor']
+    });
+
+    await renderer.xr.setSession(session);
+    $('vrButton').textContent = 'Exit VR';
+
+    session.addEventListener('end', () => {
+      $('vrButton').textContent = 'Enter VR';
+      showNotice('VR session ended.');
+    });
+  } catch (error) {
+    console.error('Could not start VR:', error);
+    showNotice(
+      'Could not start VR. Check HTTPS, headset browser compatibility and permissions.',
+      5000
+    );
+  }
+});
+
+// VR controller locomotion.
+// Left controller thumbstick moves relative to the headset's facing direction.
+function updateVRMovement(delta) {
+  if (!renderer.xr.isPresenting) return;
+
+  const session = renderer.xr.getSession();
+  if (!session) return;
+
+  const sources = session.inputSources;
+  let stickX = 0;
+  let stickY = 0;
+
+  for (const source of sources) {
+    if (!source.gamepad) continue;
+
+    const axes = source.gamepad.axes;
+    if (!axes || axes.length < 2) continue;
+
+    // Most controllers expose thumbstick axes here.
+    if (source.handedness === 'left') {
+      stickX = Math.abs(axes[2] || 0) > 0.01
+        ? axes[2] : axes[0];
+      stickY = Math.abs(axes[3] || 0) > 0.01
+        ? axes[3] : axes[1];
+      break;
+    }
+  }
+
+  if (Math.abs(stickX) < 0.12) stickX = 0;
+  if (Math.abs(stickY) < 0.12) stickY = 0;
+
+  const xrCamera = renderer.xr.getCamera(camera);
+  const direction = new THREE.Vector3();
+  xrCamera.getWorldDirection(direction);
+  direction.y = 0;
+  direction.normalize();
+
+  const right = new THREE.Vector3()
+    .crossVectors(direction, worldUp)
+    .normalize();
+
+  const movement = new THREE.Vector3()
+    .addScaledVector(direction, -stickY)
+    .addScaledVector(right, stickX);
+
+  if (movement.lengthSq() > 1) movement.normalize();
+
+  // Move the XR reference space's parent camera rig.
+  // For this simple prototype, locomotion is applied to the camera.
+  camera.position.addScaledVector(
+    movement, player.speed * delta
+  );
+
+  camera.position.x = THREE.MathUtils.clamp(
+    camera.position.x, -210, 210
+  );
+  camera.position.z = THREE.MathUtils.clamp(
+    camera.position.z, -210, 210
+  );
+}
+
+// Performance-friendly frame loop.
+function animate(time) {
+  const delta = Math.min(clock.getDelta(), 0.05);
+
+  if (!renderer.xr.isPresenting) {
+    updateMovement(delta);
+  } else {
+    updateVRMovement(delta);
+  }
+
+  animateEnvironment(time);
+  updateHud();
+
+  renderer.render(scene, camera);
+}
+
+renderer.setAnimationLoop(animate);
+
+// Resize for phones, tablets and desktop browsers.
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+
+  renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 1.5));
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+// Reveal the game once world generation has finished.
+requestAnimationFrame(() => {
+  loading.style.opacity = '0';
+  setTimeout(() => {
+    loading.style.display = 'none';
+    gameStarted = true;
+    showNotice(
+      'Welcome to Wildlands. WASD to move, mouse to look, Shift to sprint.',
+      5000
+    );
+  }, 850);
+});
+
+setupVR();
+
+console.log('Wildlands VR prototype initialized.');
+
+
