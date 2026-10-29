@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#101a14">
-<title>Wildlands VR — The Ancient Wilderness</title>
+<title>Merrow — The Shattered Realm</title>
 
 <style>
 :root {
@@ -82,6 +82,12 @@ button { font: inherit; }
   color: var(--muted);
   font-size: 10px;
   margin-top: 4px;
+}
+#pageCount {
+  color: #b5efc5;
+  font-size: 9px;
+  letter-spacing: .08em;
+  margin-top: 7px;
 }
 #crosshair {
   position: absolute;
@@ -258,20 +264,21 @@ button { font: inherit; }
 <div id="game"></div>
 
 <div id="loading">
-  <h1>WILDLANDS<span> VR</span></h1>
-  <p id="loadingText">Awakening the ancient wilderness...</p>
+  <h1>MERROW</h1>
+  <p id="loadingText">The old magic stirs beneath Merrow...</p>
   <div class="load-track"><div id="loadProgress"></div></div>
 </div>
 
 <div id="hud">
   <div id="topbar">
     <div class="panel">
-      <div class="logo">WILDLANDS<span> VR</span></div>
-      <div class="subtitle">THE ANCIENT WILDERNESS</div>
+      <div class="logo">MERROW</div>
+      <div class="subtitle">A WORLD CORRUPTED</div>
     </div>
     <div class="panel">
       <div id="location">Ancient Forest</div>
       <div id="coordinates">Expedition preparing...</div>
+      <div id="pageCount">FORBIDDEN PAGES · 0</div>
     </div>
   </div>
 
@@ -284,6 +291,7 @@ button { font: inherit; }
     </div>
     <div id="actions">
       <button class="ui-button primary" id="vrButton">Enter VR</button>
+      <button class="ui-button" id="interactButton">Interact · E</button>
       <button class="ui-button" id="campButton">Return to camp</button>
     </div>
   </div>
@@ -302,7 +310,7 @@ import * as THREE from
   'https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js';
 
 /* =========================================================
-   WILDLANDS VR — WORLD FOUNDATION
+   MERROW — WORLD FOUNDATION
    Part 1: scene, lighting, terrain and reusable builders
    ========================================================= */
 
@@ -522,6 +530,9 @@ function makeBush(x, z, scale = 1) {
 const animatedWater = [];
 const animatedFire = [];
 const animatedCrystals = [];
+let forbiddenPageGroup = null;
+let forbiddenPageCollected = false;
+const forbiddenPagePosition = new THREE.Vector3(-32, 0, -33);
 
 function createRiver() {
   const points = [
@@ -1084,6 +1095,63 @@ function createCrystalClusters() {
   }
 }
 
+// First story collectible: a page torn from the forbidden book.
+function createForbiddenPage() {
+  const page = new THREE.Group();
+  page.position.copy(forbiddenPagePosition);
+  world.add(page);
+  forbiddenPageGroup = page;
+
+  const aura = mesh(
+    new THREE.SphereGeometry(1.45, 12, 10),
+    new THREE.MeshBasicMaterial({
+      color: 0x65f2ae, transparent: true, opacity: 0.09,
+      depthWrite: false
+    }),
+    0, 2.0, 0, page
+  );
+  aura.scale.set(1, 1.35, 0.75);
+
+  const beam = mesh(
+    new THREE.CylinderGeometry(0.05, 0.72, 5.2, 10, 1, true),
+    new THREE.MeshBasicMaterial({
+      color: 0x70f5b5, transparent: true, opacity: 0.12,
+      side: THREE.DoubleSide, depthWrite: false
+    }),
+    0, 2.6, 0, page
+  );
+
+  const paper = material(0xd9c99a, 0.95, {
+    side: THREE.DoubleSide,
+    emissive: 0x3b2c14,
+    emissiveIntensity: 0.28
+  });
+  const sheet = mesh(new THREE.PlaneGeometry(1.05, 1.42), paper, 0, 2.0, 0.12, page);
+  sheet.rotation.z = -0.08;
+  sheet.rotation.y = 0.04;
+
+  const ink = material(0x473629, 1);
+  for (let i = 0; i < 7; i++) {
+    const line = mesh(
+      G.box, ink,
+      (i % 2 ? -0.035 : 0.025), 2.43 - i * 0.145, 0.145,
+      0.52 - (i % 3) * 0.07, 0.018, 0.018, page
+    );
+    line.rotation.z = (i % 2 ? -0.04 : 0.035);
+  }
+
+  const sigil = mesh(
+    new THREE.OctahedronGeometry(0.18, 0),
+    material(0x8af7bc, 0.2, { emissive: 0x2fbb79, emissiveIntensity: 2 }),
+    0, 2.98, 0.16, page
+  );
+  animatedCrystals.push(sigil);
+
+  const light = new THREE.PointLight(0x62f0aa, 2.1, 13);
+  light.position.set(0, 2.1, 0.4);
+  page.add(light);
+}
+
 // The world is built once, before Part 3 starts the game loop.
 function buildWilderness() {
   loadingText.textContent = 'Shaping the ancient terrain...';
@@ -1110,9 +1178,10 @@ function buildWilderness() {
   loadProgress.style.width = '94%';
   createMushrooms();
   createCrystalClusters();
+  createForbiddenPage();
 
   loadProgress.style.width = '100%';
-  loadingText.textContent = 'The wilderness is awakening...';
+  loadingText.textContent = 'The old magic is awakening...';
 }
 
 buildWilderness();
@@ -1167,6 +1236,35 @@ function showNotice(message, duration = 2600) {
   }, duration);
 }
 
+// Recover the page when standing close enough to its green beacon.
+function tryCollectForbiddenPage() {
+  if (forbiddenPageCollected) {
+    showNotice('This page is already secured. More pages remain lost across Merrow.');
+    return;
+  }
+
+  const distance = Math.hypot(
+    camera.position.x - forbiddenPagePosition.x,
+    camera.position.z - forbiddenPagePosition.z
+  );
+
+  if (distance > 5.2) {
+    showNotice('A green glow calls from the ancient ruins. Follow it to find the page.');
+    return;
+  }
+
+  forbiddenPageCollected = true;
+  if (forbiddenPageGroup) forbiddenPageGroup.visible = false;
+  $('pageCount').textContent = 'FORBIDDEN PAGES · 1 RECOVERED';
+  $('objective').querySelector('strong').textContent = 'The First Warning';
+  $('objectiveText').textContent = 'The page speaks of an Entity and a ritual. Every missing page must be recovered.';
+  $('interactButton').textContent = 'Page recovered';
+  $('interactButton').classList.remove('primary');
+  showNotice('PAGE RECOVERED · “Do not let the sleeping dark learn your name.”', 5200);
+}
+
+$('interactButton').addEventListener('click', tryCollectForbiddenPage);
+
 // Starting position and direction.
 camera.position.copy(spawnPoint);
 updateCameraDirection();
@@ -1175,6 +1273,7 @@ updateCameraDirection();
 addEventListener('keydown', event => {
   const key = event.key.toLowerCase();
   keys[key] = true;
+  if (key === 'e') tryCollectForbiddenPage();
 
   if (
     ['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' ']
@@ -1375,14 +1474,21 @@ function updateHud() {
   if (region !== lastRegion) {
     lastRegion = region;
     $('location').textContent = region;
-    $('objectiveText').textContent =
-      region === 'Ancient Forest'
-        ? 'Explore the forgotten wilds. Seek the ancient ruins.'
-        : `Explore ${region}. Watch for ancient discoveries.`;
+    $('objectiveText').textContent = forbiddenPageCollected
+      ? 'The first page is safe. The rest of the forbidden book is still missing.'
+      : region === 'Ancient Forest'
+        ? 'Follow the green glow to the ancient ruins. Recover the forbidden page.'
+        : `Explore ${region}. Search for the green glow and ancient discoveries.`;
   }
 
   $('coordinates').textContent =
     `X ${x.toFixed(0)} · Z ${z.toFixed(0)}`;
+
+  if (!forbiddenPageCollected) {
+    const distance = Math.hypot(x - forbiddenPagePosition.x, z - forbiddenPagePosition.z);
+    $('interactButton').textContent = distance <= 5.2 ? 'Collect Page · E' : 'Interact · E';
+    $('interactButton').classList.toggle('primary', distance <= 5.2);
+  }
 }
 
 // Keyboard and joystick movement.
@@ -1460,6 +1566,11 @@ function animateEnvironment(time) {
       item.light.intensity =
         item.baseIntensity + Math.sin(seconds * 11) * 0.45;
     }
+  }
+
+  if (forbiddenPageGroup && !forbiddenPageCollected) {
+    forbiddenPageGroup.position.y = Math.sin(seconds * 1.35) * 0.12;
+    forbiddenPageGroup.rotation.y = Math.sin(seconds * 0.45) * 0.08;
   }
 
   for (let i = 0; i < animatedCrystals.length; i++) {
@@ -1643,7 +1754,7 @@ requestAnimationFrame(() => {
     loading.style.display = 'none';
     gameStarted = true;
     showNotice(
-      'Welcome to Wildlands. WASD to move, mouse to look, Shift to sprint.',
+      'Welcome to Merrow. Find the forbidden page at the ancient ruins. WASD to move, mouse to look, Shift to sprint.',
       5000
     );
   }, 850);
@@ -1652,5 +1763,6 @@ requestAnimationFrame(() => {
 setupVR();
 
 console.log('Wildlands VR prototype initialized.');
-
-
+</script>
+</body>
+</html>
